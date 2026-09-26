@@ -1,4 +1,4 @@
-# OOP MiniBank
+# MiniBank
 
 MiniBank is a console-based banking application built as part of the OOP lab course. It is developed incrementally — each part adds a new piece to the same project, and later parts build on the classes created earlier.
 
