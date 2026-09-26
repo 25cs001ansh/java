@@ -16,6 +16,28 @@ public class MiniBank {
         System.out.println(bankInfo);
         System.out.println("===================================");
 
+        // ---- Practical 2: Customer & Account demo ----
+        Account[] accounts = new Account[3];
+        accounts[0] = new Account("Ansh Patel", 5000);
+        accounts[1] = new Account("Riya Shah");
+        accounts[2] = new Account("Karan Mehta", 2000);
+
+        accounts[0].deposit(1500);
+        accounts[1].deposit(3000);
+        accounts[2].withdraw(500);
+
+        boolean overdrawn = accounts[1].withdraw(10000);
+        if (!overdrawn) {
+            System.out.println(accounts[1].getOwnerName() + "'s withdrawal of 10000 failed — insufficient balance.");
+        }
+
+        System.out.println("\n----- Account Summary -----");
+        for (Account acc : accounts) {
+            System.out.println(acc.getAccountNumber() + " | " + acc.getOwnerName()
+                    + " | Balance: " + acc.getBalance());
+        }
+        System.out.println("----------------------------\n");
+
         Scanner sc = new Scanner(System.in);
         int choice;
 
