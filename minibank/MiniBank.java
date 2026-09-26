@@ -11,13 +11,18 @@ public class MiniBank {
     }
 
     public static void main(String[] args) {
+
         BankInfo bankInfo = new BankInfo("MiniBank", "Main Branch");
+
         System.out.println("===================================");
         System.out.println(bankInfo);
         System.out.println("===================================");
 
+
         // ---- Practical 2: Customer & Account demo ----
+
         Account[] accounts = new Account[3];
+
         accounts[0] = new Account("Ansh Patel", 5000);
         accounts[1] = new Account("Riya Shah");
         accounts[2] = new Account("Karan Mehta", 2000);
@@ -27,21 +32,82 @@ public class MiniBank {
         accounts[2].withdraw(500);
 
         boolean overdrawn = accounts[1].withdraw(10000);
+
         if (!overdrawn) {
-            System.out.println(accounts[1].getOwnerName() + "'s withdrawal of 10000 failed — insufficient balance.");
+            System.out.println(accounts[1].getOwnerName()
+                    + "'s withdrawal of 10000 failed — insufficient balance.");
         }
 
-        System.out.println("\n----- Account Summary -----");
+
+        // (1) toString – accounts print as readable text
+
+        System.out.println("\n----- Account Summary (toString) -----");
+
         for (Account acc : accounts) {
-            System.out.println(acc.getAccountNumber() + " | " + acc.getOwnerName()
-                    + " | Balance: " + acc.getBalance());
+            System.out.println(acc);   // implicitly calls toString()
         }
-        System.out.println("----------------------------\n");
+
+        System.out.println("--------------------------------------");
+
+
+        // (2) equals – compare two Account objects by accountNumber
+
+        System.out.println("\n----- equals demo -----");
+
+        System.out.println("accounts[0].equals(accounts[1]) : "
+                + accounts[0].equals(accounts[1]));   // false – different numbers
+
+        System.out.println("accounts[0].equals(accounts[0]) : "
+                + accounts[0].equals(accounts[0]));   // true  – same object
+
+
+        // (3) Customer with nested Address
+
+        System.out.println("\n----- Customer + Address demo -----");
+
+        Customer c1 = new Customer("Ansh Patel", "ansh@email.com", "9876543210");
+
+        Customer.Address addr = new Customer.Address("12 MG Road", "Mumbai", "400001");
+
+        c1.setAddress(addr);
+
+        System.out.println(c1);
+        System.out.println("City : " + c1.getAddress().getCity());
+
+
+        // (4) clone
+
+        System.out.println("\n----- clone demo -----");
+
+        Customer c2 = c1.clone();
+
+        System.out.println("Original : " + c1);
+        System.out.println("Clone    : " + c2);
+        System.out.println("Same reference? " + (c1 == c2));   // false
+
+
+        // (5) instanceof – runtime type check
+
+        System.out.println("\n----- instanceof demo -----");
+
+        Object obj1 = accounts[0];   // Account stored as Object
+        Object obj2 = c1;            // Customer stored as Object
+
+        System.out.println("obj1 instanceof Account  : " + (obj1 instanceof Account));
+        System.out.println("obj1 instanceof Customer : " + (obj1 instanceof Customer));
+        System.out.println("obj2 instanceof Customer : " + (obj2 instanceof Customer));
+        System.out.println("obj2 instanceof Account  : " + (obj2 instanceof Account));
+
+        System.out.println("-------------------------------\n");
+
+
+        // ---- MiniBank interactive menu ----
 
         Scanner sc = new Scanner(System.in);
         int choice;
 
         do {
+
             System.out.println("\n----- MiniBank Menu -----");
             System.out.println("1. Open Account");
             System.out.println("2. Deposit");
@@ -49,6 +115,7 @@ public class MiniBank {
             System.out.println("4. Transfer");
             System.out.println("5. Exit");
             System.out.print("Enter your choice: ");
+
             choice = sc.nextInt();
 
             MenuOption option = switch (choice) {
@@ -67,10 +134,10 @@ public class MiniBank {
 
             switch (option) {
                 case OPEN_ACCOUNT -> System.out.println("Open Account — to be implemented in a later lab");
-                case DEPOSIT -> System.out.println("Deposit — to be implemented in a later lab");
-                case WITHDRAW -> System.out.println("Withdraw — to be implemented in a later lab");
-                case TRANSFER -> System.out.println("Transfer — to be implemented in a later lab");
-                case EXIT -> System.out.println("Thank you for using MiniBank. Goodbye!");
+                case DEPOSIT      -> System.out.println("Deposit — to be implemented in a later lab");
+                case WITHDRAW     -> System.out.println("Withdraw — to be implemented in a later lab");
+                case TRANSFER     -> System.out.println("Transfer — to be implemented in a later lab");
+                case EXIT         -> System.out.println("Thank you for using MiniBank. Goodbye!");
             }
 
         } while (choice != 5);
