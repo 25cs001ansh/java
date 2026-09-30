@@ -1,104 +1,70 @@
 # MiniBank
 
-MiniBank is a console-based banking application built as part of the OOP lab course.
-It is developed incrementally — each part adds a new piece to the same project, and later parts build on the classes created earlier.
-
----
+MiniBank is a console-based banking application built as part of the OOP lab course. It is developed incrementally — each part adds a new piece to the same project, and later parts build on the classes created earlier.
 
 ## Features implemented
 
-### Menu shell
-
+**Menu shell**
 - `MiniBank` — public class containing the `main` method.
-
 - `BankInfo` — a record with `name` and `branch` fields, printed as the application header.
-
 - `MenuOption` — an enum with constants `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `TRANSFER`, `EXIT`.
-
 - A numbered menu displayed in a loop, read via `Scanner`.
-
 - A switch expression that prints a placeholder message for each selected option.
-
 - The loop exits and prints a goodbye message when `EXIT` is chosen.
 
----
+**Customer and Account classes**
+- `Customer` — private fields `name`, `email`, `mobile`, and a `final` `customerId`. IDs are auto-generated (e.g. `CUST101`) using a private static counter and a private static `generateCustomerId()` method. Constructor and public getters only.
 
-### Customer and Account classes
+- `Account` — private fields: `final accountNumber`, `ownerName`, `balance` (whole rupees), `active`. Account numbers are auto-generated (e.g. `AC0001`) using a private static counter.
 
-- `Customer` — private fields `name`, `email`, `mobile`, and a `final` `customerId`.
-  IDs are auto-generated (e.g. `CUST101`) using a private static counter and a private static `generateCustomerId()` method.
-  Constructor and public getters only.
+- Two constructors: `Account(ownerName, openingBalance)` and `Account(ownerName)` which delegates via `this(ownerName, 0)`.
 
-- `Account` — private fields: `final accountNumber`, `ownerName`, `balance` (whole rupees), `active`.
-  Account numbers are auto-generated (e.g. `AC0001`) using a private static counter.
+- `deposit(long amount)` adds to balance.
 
-  - Two constructors: `Account(ownerName, openingBalance)` and `Account(ownerName)` which delegates via `this(ownerName, 0)`.
+- `withdraw(long amount)` subtracts from balance and returns `true` if sufficient funds; returns `false` and leaves balance unchanged otherwise.
 
-  - `deposit(long amount)` adds to balance.
+- No public setter for `balance` — encapsulation is enforced.
 
-  - `withdraw(long amount)` subtracts from balance and returns `true` if sufficient funds;
-    returns `false` and leaves balance unchanged otherwise.
+- `main` creates three `Account` objects in an `Account[]` array, performs sample deposits/withdrawals (including one intentionally failed withdrawal), and prints each account's balance.
 
-  - No public setter for `balance` — encapsulation is enforced.
+**Object behaviour — toString, equals/hashCode, nested Address, clone**
+- `Account.toString()` — returns a readable line with `accountNumber`, `ownerName` and `balance`.
 
-- `main` creates three `Account` objects in an `Account[]` array, performs sample deposits/withdrawals
-  (including one intentionally failed withdrawal), and prints each account's balance before the menu loop starts.
+- `Account.equals()` / `Account.hashCode()` — two accounts are equal when their `accountNumber` values are equal, so accounts can be safely stored in hash-based collections later.
 
----
+- `Customer.Address` — a public static nested class with `line`, `city`, `pincode` fields and getters. `Customer` holds an `Address` field with a `getAddress()` method.
 
-### toString, equals, hashCode and nested Address
+- `Customer` implements `Cloneable` and overrides `clone()` to return a copy of the customer.
 
-**Account**
+- `main` prints accounts via `toString()`, compares two `Account` objects with `equals()`, and uses `instanceof` to check an object's type.
 
-- `toString()` — returns a readable summary:
-  `Account[number=AC0001, owner=Ansh Patel, balance=6500]`
+**Validation and command parsing**
+- `Validator` — public static methods using compiled `Pattern` regexes: `isValidMobile(String)`, `isValidEmail(String)`, `isValidPan(String)`, `isValidIfsc(String)`, each returning a boolean.
 
-- `equals(Object o)` — two `Account` objects are considered equal when their `accountNumber` values are equal.
-  Uses an `instanceof` guard before casting.
+- `TransactionType` — an enum with constants `DEPOSIT`, `WITHDRAW`, `TRANSFER`.
 
-- `hashCode()` — delegates to `Objects.hash(accountNumber)`, keeping it consistent with `equals`.
-  This is required for correct behaviour when accounts are stored in `HashSet` or `HashMap` (used in Practical 12).
+- `Command` — a record with fields `type` (`TransactionType`), `accountNumber` (`String`) and `amount` (`long`).
 
-**Customer**
+- `CommandParser` — a public static `parse(String line)` method that splits a line such as `"DEPOSIT AC0001 500"` and returns a `Command` object.
 
-- Implements `Cloneable`.
+- `StatementFormatter` — a public static `buildStatement(Account account)` method that uses a `StringBuilder` to assemble a multi-line account statement.
 
-- `clone()` — calls `super.clone()` and returns a copy of the `Customer` object.
+- `main` tests each validator with one correct and one wrong input, parses a sample command and prints its three parts, and prints a formatted statement for an account.
 
-- Static nested class `Address` added inside `Customer`:
-  - String fields: `line`, `city`, `pincode`.
-  - Public getters: `getLine()`, `getCity()`, `getPincode()`.
-  - `toString()` — returns `"12 MG Road, Mumbai - 400001"` style text.
-
-- `address` field added to `Customer` with `getAddress()` and `setAddress()` methods.
-
-**MiniBank (main demo)**
-
-- Prints all accounts using `toString()` (implicit via `println`).
-
-- Compares two `Account` objects with `equals()` and prints the result.
-
-- Creates a `Customer`, attaches an `Address` via the nested class, and prints both.
-
-- Clones a `Customer` and confirms the clone is a different object (`==` returns `false`).
-
-- Uses `instanceof` to check the runtime type of objects stored as `Object`.
-
----
-
-## Project structure
-
+### Project structure
 ```
 minibank/
 ├── MiniBank.java
-├── Account.java
 ├── Customer.java
-└── Readme.md
+├── Account.java
+├── Validator.java
+├── TransactionType.java
+├── Command.java
+├── CommandParser.java
+└── StatementFormatter.java
 ```
 
----
-
-## How to run
+### How to run
 
 ```bash
 # compile
@@ -108,41 +74,48 @@ javac minibank/*.java
 java minibank.MiniBank
 ```
 
----
-
-## Sample output
-
+### Sample output
 ```
 ===================================
 BankInfo[name=MiniBank, branch=Main Branch]
 ===================================
-Riya Shah's withdrawal of 10000 failed — insufficient balance.
 
 ----- Account Summary (toString) -----
-Account[number=AC0001, owner=Ansh Patel, balance=6500]
-Account[number=AC0002, owner=Riya Shah, balance=3000]
-Account[number=AC0003, owner=Karan Mehta, balance=1500]
---------------------------------------
+Account[number=AC0001, owner=Ansh Patel, balance=6500, active=true]
+Account[number=AC0002, owner=Riya Shah, balance=3000, active=true]
+Account[number=AC0003, owner=Karan Mehta, balance=1500, active=true]
+---------------------------------------
 
------ equals demo -----
-accounts[0].equals(accounts[1]) : false
-accounts[0].equals(accounts[0]) : true
+accounts[0].equals(duplicateOfFirst): true
+accounts[0].equals(accounts[1]): false
+Account[number=AC0003, owner=Karan Mehta, balance=1500, active=true] is an instance of Account
 
------ Customer + Address demo -----
-Customer[id=CUST101, name=Ansh Patel, email=ansh@email.com, mobile=9876543210, address=12 MG Road, Mumbai - 400001]
-City : Mumbai
+Original customer: Customer[id=CUST101, name=Ansh Patel, email=ansh@example.com, mobile=9876543210, address=221B Ring Road, Ahmedabad - 380001]
+Cloned customer:   Customer[id=CUST101, name=Ansh Patel, email=ansh@example.com, mobile=9876543210, address=221B Ring Road, Ahmedabad - 380001]
 
------ clone demo -----
-Original : Customer[id=CUST101, name=Ansh Patel, ...]
-Clone    : Customer[id=CUST101, name=Ansh Patel, ...]
-Same reference? false
+----- Validator Tests -----
+Mobile 9876543210 (correct): true
+Mobile 12345 (wrong):        false
+Email ansh@example.com (correct): true
+Email ansh@@example (wrong):       false
+PAN ABCDE1234F (correct): true
+PAN ABC1234F (wrong):      false
+IFSC HDFC0001234 (correct): true
+IFSC HDFC1234 (wrong):       false
+----------------------------
 
------ instanceof demo -----
-obj1 instanceof Account  : true
-obj1 instanceof Customer : false
-obj2 instanceof Customer : true
-obj2 instanceof Account  : false
--------------------------------
+----- Parsed Command -----
+Type          : DEPOSIT
+Account Number: AC0001
+Amount        : 500
+---------------------------
+
+========== ACCOUNT STATEMENT ==========
+Account Number : AC0001
+Owner Name     : Ansh Patel
+Balance        : 6500
+Status         : ACTIVE
+========================================
 
 ----- MiniBank Menu -----
 1. Open Account
@@ -153,13 +126,8 @@ obj2 instanceof Account  : false
 Enter your choice:
 ```
 
----
-
 ## Roadmap
-
-Future work will implement real logic behind each menu option — account creation, deposits, withdrawals, and transfers — along with proper data storage and validation.
-
----
+Future work will run every menu action through the validation and command-parsing layer, and implement real logic behind each option — account creation, deposits, withdrawals, and transfers — with proper data storage.
 
 ## Author
 Ansh — Roll No: 25CS001
