@@ -105,7 +105,7 @@ java service.MiniBank
 ### Sample output
 ```
 ===================================
-BankInfo[name=MiniBank, branch=Main Branch]
+BankInfo[name=MiniBank, branch=Master Branch]
 ===================================
 Karan Mehta's withdrawal failed — fixed deposit is locked for withdrawals.
 
