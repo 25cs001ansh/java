@@ -16,19 +16,19 @@ public class MiniBank {
         System.out.println(bankInfo);
         System.out.println("===================================");
 
-        // ---- Practical 2: Customer & Account demo ----
+        // ---- Customer & Account demo (Account is now abstract; use subclasses) ----
         Account[] accounts = new Account[3];
-        accounts[0] = new Account("Ansh Patel", 5000);
-        accounts[1] = new Account("Riya Shah");
-        accounts[2] = new Account("Karan Mehta", 2000);
+        accounts[0] = new SavingsAccount("Ansh Patel", 5000, 1000);
+        accounts[1] = new CurrentAccount("Riya Shah", 0, 2000);
+        accounts[2] = new FixedDepositAccount("Karan Mehta", 2000);
 
         accounts[0].deposit(1500);
         accounts[1].deposit(3000);
-        accounts[2].withdraw(500);
 
-        boolean overdrawn = accounts[1].withdraw(10000);
+        boolean overdrawn = accounts[2].withdraw(500);
         if (!overdrawn) {
-            System.out.println(accounts[1].getOwnerName() + "'s withdrawal of 10000 failed — insufficient balance.");
+            System.out.println(accounts[2].getOwnerName()
+                    + "'s withdrawal failed — fixed deposit is locked for withdrawals.");
         }
 
         System.out.println("\n----- Account Summary (toString) -----");
@@ -36,6 +36,23 @@ public class MiniBank {
             System.out.println(acc);
         }
         System.out.println("---------------------------------------\n");
+
+        // ---- Polymorphism demo: interestRate() resolved at runtime for each type ----
+        System.out.println("----- Interest Rates (runtime polymorphism) -----");
+        for (Account acc : accounts) {
+            System.out.println(acc.getAccountNumber() + " (" + acc.getClass().getSimpleName()
+                    + ") -> interest rate: " + acc.interestRate() + "%");
+        }
+        System.out.println("--------------------------------------------------\n");
+
+        // instanceof pattern check: handle CurrentAccount specially
+        for (Account acc : accounts) {
+            if (acc instanceof CurrentAccount currentAccount) {
+                System.out.println(acc.getAccountNumber() + " is a CurrentAccount with overdraft limit: "
+                        + currentAccount.getOverdraftLimit());
+            }
+        }
+        System.out.println();
 
         // equals() demo: same accountNumber => equal, different => not equal
         Account duplicateOfFirst = accounts[0];
