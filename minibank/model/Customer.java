@@ -1,6 +1,5 @@
-package minibank;
+package model;
 
-// (4) Implement Cloneable so clone() is allowed
 public class Customer implements Cloneable {
 
     private String name;
@@ -8,14 +7,9 @@ public class Customer implements Cloneable {
     private String mobile;
     private final String customerId;
 
-    // (3) Address field
     private Address address;
 
     private static long customerCounter = 100;
-
-    // ----------------------------------------------------------------
-    // Constructor
-    // ----------------------------------------------------------------
 
     public Customer(String name, String email, String mobile) {
         this.name = name;
@@ -24,27 +18,23 @@ public class Customer implements Cloneable {
         this.customerId = generateCustomerId();
     }
 
+    public Customer(String name, String email, String mobile, Address address) {
+        this(name, email, mobile);
+        this.address = address;
+    }
+
     private static String generateCustomerId() {
         customerCounter++;
         return "CUST" + customerCounter;
     }
-
-    // ----------------------------------------------------------------
-    // Getters
-    // ----------------------------------------------------------------
 
     public String getName()       { return name; }
     public String getEmail()      { return email; }
     public String getMobile()     { return mobile; }
     public String getCustomerId() { return customerId; }
 
-    // (3) Address getter / setter
     public Address getAddress()              { return address; }
     public void    setAddress(Address addr)  { this.address = addr; }
-
-    // ----------------------------------------------------------------
-    // toString
-    // ----------------------------------------------------------------
 
     @Override
     public String toString() {
@@ -55,24 +45,14 @@ public class Customer implements Cloneable {
                 + ", address=" + address + "]";
     }
 
-    // ----------------------------------------------------------------
-    // (4) clone – returns a copy of this Customer
-    // ----------------------------------------------------------------
-
     @Override
     public Customer clone() {
         try {
-            // super.clone() performs a shallow copy of all fields
             return (Customer) super.clone();
         } catch (CloneNotSupportedException e) {
-            // Cannot happen: this class implements Cloneable
             throw new AssertionError("Cloning failed", e);
         }
     }
-
-    // ================================================================
-    // (3) Public static nested class Address
-    // ================================================================
 
     public static class Address {
 
@@ -86,7 +66,6 @@ public class Customer implements Cloneable {
             this.pincode = pincode;
         }
 
-        // Getters
         public String getLine()    { return line; }
         public String getCity()    { return city; }
         public String getPincode() { return pincode; }

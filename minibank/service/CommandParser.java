@@ -1,4 +1,4 @@
-package minibank;
+package service;
 
 public class CommandParser {
 

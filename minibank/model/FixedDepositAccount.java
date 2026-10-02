@@ -1,4 +1,4 @@
-package minibank;
+package model;
 
 public class FixedDepositAccount extends Account {
 

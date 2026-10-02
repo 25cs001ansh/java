@@ -1,6 +1,6 @@
-package minibank;
+package model;
 
-public class SavingsAccount extends Account {
+public class SavingsAccount extends Account implements Premium {
 
     private long minBalance;
 

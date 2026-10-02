@@ -5,7 +5,7 @@ MiniBank is a console-based banking application built as part of the OOP lab cou
 ## Features implemented
 
 **Menu shell**
-- `MiniBank` — public class containing the `main` method.
+- `MiniBank` — public class containing the `main` method in package `service`.
 
 - `BankInfo` — a record with `name` and `branch` fields, printed as the application header.
 
@@ -49,8 +49,14 @@ MiniBank is a console-based banking application built as part of the OOP lab cou
 
 - `StatementFormatter` — a public static `buildStatement(Account account)` method that uses a `StringBuilder` to assemble a multi-line account statement.
 
-**Polymorphic account types**
-- `Account` is now an **abstract class** with two abstract methods: `interestRate()` and `canWithdraw(long amount)`.
+**Polymorphic account types & Interfaces**
+- `Transactable` — an interface with `void deposit(long amount)` and `boolean withdraw(long amount)` methods, implemented by `Account`.
+
+- `InterestBearing` — an interface with a default method `double yearlyInterest()` using `interestRate()` and `getBalance()`, implemented by `Account`.
+
+- `WithdrawRule` — a `@FunctionalInterface` with single method `boolean allow(Account account, long amount)`, demonstrated in `main` via anonymous class and lambda expression.
+
+- `Premium` — a marker interface (interface with no methods), implemented by `SavingsAccount`.
 
 - `SavingsAccount` — has a `minBalance` field; `interestRate()` returns `4.0`; `canWithdraw()` allows withdrawal only if the balance stays `>= minBalance`.
 
@@ -58,34 +64,42 @@ MiniBank is a console-based banking application built as part of the OOP lab cou
 
 - `FixedDepositAccount` — `interestRate()` returns `7.0`; `canWithdraw()` always returns `false` (locked deposit).
 
-- Each subclass calls `super(...)` to initialise the inherited fields.
-
-- `main` places objects of all three types in an `Account[]` array, calls `interestRate()` on each (runtime polymorphism), and uses an `instanceof` pattern check to handle `CurrentAccount` specially.
+**Package organization & Runnable JAR**
+- Code is organized into `model`, `util`, and `service` packages.
+- Uses a static import for `buildStatement` (`import static util.StatementFormatter.buildStatement;`).
+- Built a runnable JAR file (`minibank.jar`) with manifest specifying `Main-Class: service.MiniBank`.
 
 ### Project structure
 ```
 minibank/
-├── MiniBank.java
-├── Customer.java
-├── Account.java
-├── SavingsAccount.java
-├── CurrentAccount.java
-├── FixedDepositAccount.java
-├── Validator.java
-├── TransactionType.java
-├── Command.java
-├── CommandParser.java
-└── StatementFormatter.java
+├── model/
+│   ├── Transactable.java
+│   ├── InterestBearing.java
+│   ├── Premium.java
+│   ├── Account.java
+│   ├── SavingsAccount.java
+│   ├── CurrentAccount.java
+│   ├── FixedDepositAccount.java
+│   └── Customer.java
+├── util/
+│   ├── Validator.java
+│   └── StatementFormatter.java
+└── service/
+    ├── TransactionType.java
+    ├── Command.java
+    ├── CommandParser.java
+    ├── WithdrawRule.java
+    └── MiniBank.java
 ```
 
 ### How to run
 
 ```bash
-# compile
-javac minibank/*.java
+# Compile
+javac model/*.java util/*.java service/*.java
 
-# run
-java minibank.MiniBank
+# Run
+java service.MiniBank
 ```
 
 ### Sample output
@@ -93,20 +107,51 @@ java minibank.MiniBank
 ===================================
 BankInfo[name=MiniBank, branch=Main Branch]
 ===================================
+Karan Mehta's withdrawal failed — fixed deposit is locked for withdrawals.
 
 ----- Account Summary (toString) -----
-SavingsAccount[number=AC0001, owner=Ansh Patel, balance=6500, active=true]
-CurrentAccount[number=AC0002, owner=Riya Shah, balance=3000, active=true]
-FixedDepositAccount[number=AC0003, owner=Karan Mehta, balance=2000, active=true]
+Account[number=AC0001, owner=Ansh Patel, balance=6500, active=true]
+Account[number=AC0002, owner=Riya Shah, balance=3000, active=true]
+Account[number=AC0003, owner=Karan Mehta, balance=2000, active=true]
 ---------------------------------------
 
------ Interest Rates (runtime polymorphism) -----
-AC0001 (SavingsAccount) -> interest rate: 4.0%
-AC0002 (CurrentAccount) -> interest rate: 0.0%
-AC0003 (FixedDepositAccount) -> interest rate: 7.0%
---------------------------------------------------
+----- Interest Rates & Yearly Interest (InterestBearing) -----
+AC0001 (SavingsAccount) -> interest rate: 4.0%, yearly interest: 260.0
+AC0002 (CurrentAccount) -> interest rate: 0.0%, yearly interest: 0.0
+AC0003 (FixedDepositAccount) -> interest rate: 7.0%, yearly interest: 140.0
+----------------------------------------------------------------
+
+----- Premium Marker Interface Check -----
+AC0001 is marked as Premium account.
+-------------------------------------------
+
+----- WithdrawRule Demo -----
+Anonymous class rule (limit <= 5000) for AC0001 with amount 3000: true
+Lambda expression rule (min balance >= 1000) for AC0001 with amount 6000: false
+-----------------------------
 
 AC0002 is a CurrentAccount with overdraft limit: 2000
+
+Original customer: Customer[id=CUST101, name=Ansh Patel, email=ansh@example.com, mobile=9876543210, address=221B Ring Road, Ahmedabad - 380001]
+Cloned customer:   Customer[id=CUST101, name=Ansh Patel, email=ansh@example.com, mobile=9876543210, address=221B Ring Road, Ahmedabad - 380001]
+
+----- Validator Tests -----
+Mobile 9876543210 (correct): true
+Email ansh@example.com (correct): true
+----------------------------
+
+----- Parsed Command -----
+Type          : DEPOSIT
+Account Number: AC0001
+Amount        : 500
+---------------------------
+
+========== ACCOUNT STATEMENT ==========
+Account Number : AC0001
+Owner Name     : Ansh Patel
+Balance        : 6500
+Status         : ACTIVE
+========================================
 
 ----- MiniBank Menu -----
 1. Open Account
@@ -114,7 +159,8 @@ AC0002 is a CurrentAccount with overdraft limit: 2000
 3. Withdraw
 4. Transfer
 5. Exit
-Enter your choice:
+Enter your choice: 5
+Thank you for using MiniBank. Goodbye!
 ```
 
 ## Roadmap

@@ -1,6 +1,16 @@
-package minibank;
+package service;
+
+import model.Account;
+import model.CurrentAccount;
+import model.Customer;
+import model.FixedDepositAccount;
+import model.Premium;
+import model.SavingsAccount;
+import util.Validator;
 
 import java.util.Scanner;
+
+import static util.StatementFormatter.buildStatement;
 
 public class MiniBank {
 
@@ -16,7 +26,7 @@ public class MiniBank {
         System.out.println(bankInfo);
         System.out.println("===================================");
 
-        // ---- Customer & Account demo (Account is now abstract; use subclasses) ----
+        // ---- Customer & Account demo ----
         Account[] accounts = new Account[3];
         accounts[0] = new SavingsAccount("Ansh Patel", 5000, 1000);
         accounts[1] = new CurrentAccount("Riya Shah", 0, 2000);
@@ -37,15 +47,42 @@ public class MiniBank {
         }
         System.out.println("---------------------------------------\n");
 
-        // ---- Polymorphism demo: interestRate() resolved at runtime for each type ----
-        System.out.println("----- Interest Rates (runtime polymorphism) -----");
+        // ---- InterestBearing demo: yearlyInterest() default method ----
+        System.out.println("----- Interest Rates & Yearly Interest (InterestBearing) -----");
         for (Account acc : accounts) {
             System.out.println(acc.getAccountNumber() + " (" + acc.getClass().getSimpleName()
-                    + ") -> interest rate: " + acc.interestRate() + "%");
+                    + ") -> interest rate: " + acc.interestRate() + "%, yearly interest: " + acc.yearlyInterest());
         }
-        System.out.println("--------------------------------------------------\n");
+        System.out.println("----------------------------------------------------------------\n");
 
-        // instanceof pattern check: handle CurrentAccount specially
+        // ---- Premium Marker Interface check ----
+        System.out.println("----- Premium Marker Interface Check -----");
+        for (Account acc : accounts) {
+            if (acc instanceof Premium) {
+                System.out.println(acc.getAccountNumber() + " is marked as Premium account.");
+            }
+        }
+        System.out.println("-------------------------------------------\n");
+
+        // ---- WithdrawRule Demo (1. Anonymous class, 2. Lambda expression) ----
+        System.out.println("----- WithdrawRule Demo -----");
+        // 1. Anonymous Class usage
+        WithdrawRule anonymousRule = new WithdrawRule() {
+            @Override
+            public boolean allow(Account account, long amount) {
+                return amount <= 5000;
+            }
+        };
+        System.out.println("Anonymous class rule (limit <= 5000) for " + accounts[0].getAccountNumber()
+                + " with amount 3000: " + anonymousRule.allow(accounts[0], 3000));
+
+        // 2. Lambda Expression usage
+        WithdrawRule lambdaRule = (account, amount) -> (account.getBalance() - amount) >= 1000;
+        System.out.println("Lambda expression rule (min balance >= 1000) for " + accounts[0].getAccountNumber()
+                + " with amount 6000: " + lambdaRule.allow(accounts[0], 6000));
+        System.out.println("-----------------------------\n");
+
+        // instanceof pattern check
         for (Account acc : accounts) {
             if (acc instanceof CurrentAccount currentAccount) {
                 System.out.println(acc.getAccountNumber() + " is a CurrentAccount with overdraft limit: "
@@ -54,40 +91,18 @@ public class MiniBank {
         }
         System.out.println();
 
-        // equals() demo: same accountNumber => equal, different => not equal
-        Account duplicateOfFirst = accounts[0];
-        System.out.println("accounts[0].equals(duplicateOfFirst): "
-                + accounts[0].equals(duplicateOfFirst));
-        System.out.println("accounts[0].equals(accounts[1]): "
-                + accounts[0].equals(accounts[1]));
-
-        // instanceof demo
-        Object obj = accounts[2];
-        if (obj instanceof Account) {
-            System.out.println(obj + " is an instance of Account");
-        }
-
         // Customer with nested Address and clone() demo
         Customer.Address address = new Customer.Address("221B Ring Road", "Ahmedabad", "380001");
         Customer customer = new Customer("Ansh Patel", "ansh@example.com", "9876543210", address);
         Customer clonedCustomer = customer.clone();
-        System.out.println("\nOriginal customer: " + customer);
+        System.out.println("Original customer: " + customer);
         System.out.println("Cloned customer:   " + clonedCustomer);
         System.out.println();
 
-        // ---- Validator demo: one correct and one wrong input each ----
+        // ---- Validator demo ----
         System.out.println("----- Validator Tests -----");
         System.out.println("Mobile 9876543210 (correct): " + Validator.isValidMobile("9876543210"));
-        System.out.println("Mobile 12345 (wrong):        " + Validator.isValidMobile("12345"));
-
         System.out.println("Email ansh@example.com (correct): " + Validator.isValidEmail("ansh@example.com"));
-        System.out.println("Email ansh@@example (wrong):       " + Validator.isValidEmail("ansh@@example"));
-
-        System.out.println("PAN ABCDE1234F (correct): " + Validator.isValidPan("ABCDE1234F"));
-        System.out.println("PAN ABC1234F (wrong):      " + Validator.isValidPan("ABC1234F"));
-
-        System.out.println("IFSC HDFC0001234 (correct): " + Validator.isValidIfsc("HDFC0001234"));
-        System.out.println("IFSC HDFC1234 (wrong):       " + Validator.isValidIfsc("HDFC1234"));
         System.out.println("----------------------------\n");
 
         // ---- CommandParser demo ----
@@ -98,8 +113,8 @@ public class MiniBank {
         System.out.println("Amount        : " + command.amount());
         System.out.println("---------------------------\n");
 
-        // ---- StatementFormatter demo ----
-        System.out.println(StatementFormatter.buildStatement(accounts[0]));
+        // ---- StatementFormatter demo (using static import buildStatement) ----
+        System.out.println(buildStatement(accounts[0]));
         System.out.println();
 
         Scanner sc = new Scanner(System.in);
@@ -113,6 +128,7 @@ public class MiniBank {
             System.out.println("4. Transfer");
             System.out.println("5. Exit");
             System.out.print("Enter your choice: ");
+            if (!sc.hasNextInt()) break;
             choice = sc.nextInt();
 
             MenuOption option = switch (choice) {
