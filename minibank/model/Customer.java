@@ -1,4 +1,4 @@
-package model;
+package minibank.model;
 
 public class Customer implements Cloneable {
 
@@ -6,7 +6,6 @@ public class Customer implements Cloneable {
     private String email;
     private String mobile;
     private final String customerId;
-
     private Address address;
 
     private static long customerCounter = 100;
@@ -28,21 +27,28 @@ public class Customer implements Cloneable {
         return "CUST" + customerCounter;
     }
 
-    public String getName()       { return name; }
-    public String getEmail()      { return email; }
-    public String getMobile()     { return mobile; }
-    public String getCustomerId() { return customerId; }
+    public String getName() {
+        return name;
+    }
 
-    public Address getAddress()              { return address; }
-    public void    setAddress(Address addr)  { this.address = addr; }
+    public String getEmail() {
+        return email;
+    }
 
-    @Override
-    public String toString() {
-        return "Customer[id=" + customerId
-                + ", name=" + name
-                + ", email=" + email
-                + ", mobile=" + mobile
-                + ", address=" + address + "]";
+    public String getMobile() {
+        return mobile;
+    }
+
+    public String getCustomerId() {
+        return customerId;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
     }
 
     @Override
@@ -50,25 +56,39 @@ public class Customer implements Cloneable {
         try {
             return (Customer) super.clone();
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError("Cloning failed", e);
+            throw new AssertionError("Customer must be cloneable", e);
         }
     }
 
-    public static class Address {
+    @Override
+    public String toString() {
+        return "Customer[id=" + customerId + ", name=" + name +
+                ", email=" + email + ", mobile=" + mobile +
+                ", address=" + address + "]";
+    }
 
-        private String line;
-        private String city;
-        private String pincode;
+    public static class Address {
+        private final String line;
+        private final String city;
+        private final String pincode;
 
         public Address(String line, String city, String pincode) {
-            this.line    = line;
-            this.city    = city;
+            this.line = line;
+            this.city = city;
             this.pincode = pincode;
         }
 
-        public String getLine()    { return line; }
-        public String getCity()    { return city; }
-        public String getPincode() { return pincode; }
+        public String getLine() {
+            return line;
+        }
+
+        public String getCity() {
+            return city;
+        }
+
+        public String getPincode() {
+            return pincode;
+        }
 
         @Override
         public String toString() {

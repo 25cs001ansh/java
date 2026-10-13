@@ -1,4 +1,4 @@
-package model;
+package minibank.model;
 
 public abstract class Account implements Transactable, InterestBearing {
 
@@ -25,17 +25,14 @@ public abstract class Account implements Transactable, InterestBearing {
         return String.format("AC%04d", accountCounter);
     }
 
-    @Override
     public abstract double interestRate();
 
     public abstract boolean canWithdraw(long amount);
 
-    @Override
     public void deposit(long amount) {
         balance += amount;
     }
 
-    @Override
     public boolean withdraw(long amount) {
         if (canWithdraw(amount)) {
             balance -= amount;
@@ -52,7 +49,6 @@ public abstract class Account implements Transactable, InterestBearing {
         return ownerName;
     }
 
-    @Override
     public long getBalance() {
         return balance;
     }

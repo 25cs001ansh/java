@@ -1,4 +1,7 @@
-package service;
+package util;
+
+import minibank.model.Command;
+import minibank.model.TransactionType;
 
 public class CommandParser {
 

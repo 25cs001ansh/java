@@ -1,4 +1,4 @@
-package model;
+package minibank.model;
 
 public interface Premium {
 }

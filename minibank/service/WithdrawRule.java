@@ -1,6 +1,6 @@
-package service;
+package minibank.service;
 
-import model.Account;
+import minibank.model.Account;
 
 @FunctionalInterface
 public interface WithdrawRule {
