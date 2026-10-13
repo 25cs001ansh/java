@@ -1,4 +1,4 @@
-
+package minibank;
 
 import java.util.Scanner;
 

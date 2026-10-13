@@ -1,4 +1,4 @@
-package util;
+package minibank.util;
 
 import minibank.model.Command;
 import minibank.model.TransactionType;
