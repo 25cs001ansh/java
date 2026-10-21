@@ -11,6 +11,7 @@ import minibank.model.FixedDepositAccount;
 import minibank.model.MenuOption;
 import minibank.model.SavingsAccount;
 import minibank.service.WithdrawRule;
+import minibank.util.AnnotationValidator;
 import minibank.util.CommandParser;
 import minibank.util.StatementFormatter;
 import minibank.util.Validator;
@@ -127,6 +128,20 @@ public class MiniBank {
         out.println("Lambda rule allows withdrawing 1000 from " + accounts[0].getAccountNumber()
                 + ": " + lambdaRule.allow(accounts[0], 1000));
         out.println("------------------------------\n");
+
+        // ---- AnnotationValidator demo: an account with a negative balance ----
+        Account invalidAccount = new SavingsAccount("Test User", -500, 1000);
+        String[] validationErrors = AnnotationValidator.validate(invalidAccount);
+
+        System.out.println("----- AnnotationValidator Demo -----");
+        if (validationErrors.length == 0) {
+            System.out.println("No validation errors found.");
+        } else {
+            for (String error : validationErrors) {
+                System.out.println("Validation error: " + error);
+            }
+        }
+        System.out.println("-------------------------------------\n");
 
         Scanner sc = new Scanner(System.in);
         int choice;

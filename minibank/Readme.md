@@ -6,34 +6,34 @@ MiniBank is a console-based banking application built as part of the OOP lab cou
 
 ```
 minibank/
-├── MiniBank.java                            (package minibank)
-├── model/                                   (package minibank.model)
-│   ├── Account.java
+├── MiniBank.java                 (package minibank)
+├── model/                        (package minibank.model)
 │   ├── BankInfo.java
-│   ├── Command.java
-│   ├── CurrentAccount.java
-│   ├── Customer.java
-│   ├── FixedDepositAccount.java
-│   ├── InterestBearing.java
 │   ├── MenuOption.java
-│   ├── Premium.java
+│   ├── Customer.java
+│   ├── Account.java
 │   ├── SavingsAccount.java
-│   ├── Transactable.java
+│   ├── CurrentAccount.java
+│   ├── FixedDepositAccount.java
 │   ├── TransactionType.java
-│   └── ...
-├── util/                                    (package minibank.util)
+│   ├── Command.java
+│   ├── Transactable.java
+│   ├── InterestBearing.java
+│   ├── Premium.java
+│   └── annotation/                (package minibank.model.annotation)
+│       ├── Id.java
+│       ├── Positive.java
+│       └── MaxLength.java
+├── util/                         (package minibank.util)
+│   ├── Validator.java
 │   ├── CommandParser.java
 │   ├── StatementFormatter.java
-│   └── Validator.java
-├── service/                                 (package minibank.service)
-│   ├── WithdrawRule.java
-│   ├── Command.java                        
-│   ├── TransactionType.java                
-│   └── ...
-└── ...
+│   └── AnnotationValidator.java
+└── service/
+    ├── Command.java              (package service)
+    ├── TransactionType.java      (package service)
+    └── WithdrawRule.java         (package minibank.service)
 ```
-
-The intended package layout is `minibank.model`, `minibank.util`, and `minibank.service`. The extra `service/Command.java` and `service/TransactionType.java` files are leftover copies and are not part of the final packaged design.
 
 ## Features implemented
 
@@ -93,7 +93,6 @@ javac minibank/*.java minibank/model/*.java minibank/util/*.java minibank/servic
 java -cp out minibank.MiniBank
 ```
 
-
 ### Build a runnable JAR
 ```bash
 cd out
@@ -112,3 +111,14 @@ Future work will run every menu action through the validation, command-parsing, 
 
 ## Author
 Ansh — Roll No: 25CS001
+
+## Annotations and reflection-based validation
+
+- All overridden methods (`toString`, `equals`, `hashCode` in `Account`; `interestRate()` and `canWithdraw()` in the subclasses; `clone()` and `toString()` in `Customer`) are marked with `@Override`. `WithdrawRule` is marked `@FunctionalInterface`.
+- `model.annotation` package — three custom annotations:
+  - `@Id` — marker annotation, `@Target(FIELD)` and `@Retention(RUNTIME)`.
+  - `@Positive` — has `String message()` defaulting to `"must be > 0"`.
+  - `@MaxLength` — has `int value()`.
+- `Account.accountNumber` is annotated `@Id`; `Account.balance` is annotated `@Positive`.
+- `AnnotationValidator.validate(Object obj)` — uses reflection (`getClass().getDeclaredFields()`, `field.isAnnotationPresent(...)`, `field.setAccessible(true)`, `field.get(obj)`) to check `@Positive` and `@MaxLength` rules and returns the error messages as a `String[]`. It walks up the class hierarchy so inherited fields (like `balance`, declared in the abstract `Account` class) are checked even when validating a subclass instance.
+- `main` creates a `SavingsAccount` with a negative balance and runs `AnnotationValidator.validate()`, printing the resulting error.
