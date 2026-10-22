@@ -10,10 +10,14 @@ import minibank.model.Customer;
 import minibank.model.FixedDepositAccount;
 import minibank.model.MenuOption;
 import minibank.model.SavingsAccount;
+import minibank.exception.BankException;
+import minibank.exception.InsufficientFundsException;
+import minibank.exception.InvalidAmountException;
 import minibank.service.WithdrawRule;
 import minibank.util.AnnotationValidator;
 import minibank.util.CommandParser;
 import minibank.util.StatementFormatter;
+import minibank.util.TransactionLogger;
 import minibank.util.Validator;
 
 import static java.lang.System.out;
@@ -32,13 +36,24 @@ public class MiniBank {
         accounts[1] = new CurrentAccount("Riya Shah", 0, 2000);
         accounts[2] = new FixedDepositAccount("Karan Mehta", 2000);
 
-        accounts[0].deposit(1500);
-        accounts[1].deposit(3000);
+        try {
+            accounts[0].deposit(1500);
+            accounts[1].deposit(3000);
+        } catch (InvalidAmountException e) {
+            System.out.println("Deposit failed: " + e.getMessage());
+        } finally {
+            System.out.println("Initial deposits processed.");
+        }
 
-        boolean overdrawn = accounts[2].withdraw(500);
-        if (!overdrawn) {
-            System.out.println(accounts[2].getOwnerName()
-                    + "'s withdrawal failed — fixed deposit is locked for withdrawals.");
+        try {
+            accounts[2].withdraw(500);
+        } catch (InsufficientFundsException e) {
+            System.out.println(accounts[2].getOwnerName() + "'s withdrawal failed: " + e.getMessage()
+                    + " (shortfall: " + e.getShortfall() + ")");
+        } catch (InvalidAmountException e) {
+            System.out.println(accounts[2].getOwnerName() + "'s withdrawal failed: " + e.getMessage());
+        } finally {
+            System.out.println(accounts[2].getOwnerName() + "'s withdrawal attempt finished.");
         }
 
         System.out.println("\n----- Account Summary (toString) -----");
@@ -128,6 +143,22 @@ public class MiniBank {
         out.println("Lambda rule allows withdrawing 1000 from " + accounts[0].getAccountNumber()
                 + ": " + lambdaRule.allow(accounts[0], 1000));
         out.println("------------------------------\n");
+
+        // ---- try-with-resources demo using a custom AutoCloseable, plus transfer() ----
+        System.out.println("----- Transfer Demo (try-with-resources) -----");
+        try (TransactionLogger logger = new TransactionLogger()) {
+            logger.log("Attempting transfer of 1000 from " + accounts[0].getAccountNumber()
+                    + " to " + accounts[1].getAccountNumber());
+            try {
+                accounts[0].transfer(accounts[1], 1000);
+                logger.log("Transfer succeeded.");
+            } catch (BankException e) {
+                System.out.println("Transfer failed: " + e.getMessage());
+            } finally {
+                System.out.println("Transfer block finished.");
+            }
+        }
+        System.out.println("------------------------------------------------\n");
 
         // ---- AnnotationValidator demo: an account with a negative balance ----
         Account invalidAccount = new SavingsAccount("Test User", -500, 1000);

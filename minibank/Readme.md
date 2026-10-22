@@ -20,19 +20,25 @@ minibank/
 │   ├── Transactable.java
 │   ├── InterestBearing.java
 │   ├── Premium.java
-│   └── annotation/                (package minibank.model.annotation)
+│   └── annotation/               (package minibank.model.annotation)
 │       ├── Id.java
-│       ├── Positive.java
-│       └── MaxLength.java
+│       ├── MaxLength.java
+│       └── Positive.java
 ├── util/                         (package minibank.util)
 │   ├── Validator.java
 │   ├── CommandParser.java
-│   ├── StatementFormatter.java
-│   └── AnnotationValidator.java
-└── service/
-    ├── Command.java              (package service)
-    ├── TransactionType.java      (package service)
-    └── WithdrawRule.java         (package minibank.service)
+│   ├── AnnotationValidator.java
+│   ├── TransactionLogger.java
+│   └── StatementFormatter.java
+├── service/
+│   ├── WithdrawRule.java         (package minibank.service)
+│   ├── Command.java              (package service)
+│   └── TransactionType.java      (package service)
+└── exception/                    (package minibank.exception)
+    ├── BankException.java
+    ├── AccountNotFoundException.java
+    ├── InsufficientFundsException.java
+    └── InvalidAmountException.java
 ```
 
 ## Features implemented
@@ -111,14 +117,3 @@ Future work will run every menu action through the validation, command-parsing, 
 
 ## Author
 Ansh — Roll No: 25CS001
-
-## Annotations and reflection-based validation
-
-- All overridden methods (`toString`, `equals`, `hashCode` in `Account`; `interestRate()` and `canWithdraw()` in the subclasses; `clone()` and `toString()` in `Customer`) are marked with `@Override`. `WithdrawRule` is marked `@FunctionalInterface`.
-- `model.annotation` package — three custom annotations:
-  - `@Id` — marker annotation, `@Target(FIELD)` and `@Retention(RUNTIME)`.
-  - `@Positive` — has `String message()` defaulting to `"must be > 0"`.
-  - `@MaxLength` — has `int value()`.
-- `Account.accountNumber` is annotated `@Id`; `Account.balance` is annotated `@Positive`.
-- `AnnotationValidator.validate(Object obj)` — uses reflection (`getClass().getDeclaredFields()`, `field.isAnnotationPresent(...)`, `field.setAccessible(true)`, `field.get(obj)`) to check `@Positive` and `@MaxLength` rules and returns the error messages as a `String[]`. It walks up the class hierarchy so inherited fields (like `balance`, declared in the abstract `Account` class) are checked even when validating a subclass instance.
-- `main` creates a `SavingsAccount` with a negative balance and runs `AnnotationValidator.validate()`, printing the resulting error.

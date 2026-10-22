@@ -1,5 +1,8 @@
 package minibank.model;
 
+import minibank.exception.BankException;
+import minibank.exception.InsufficientFundsException;
+import minibank.exception.InvalidAmountException;
 import minibank.model.annotation.Id;
 import minibank.model.annotation.Positive;
 
@@ -34,16 +37,38 @@ public abstract class Account implements Transactable, InterestBearing {
 
     public abstract boolean canWithdraw(long amount);
 
-    public void deposit(long amount) {
+    public void deposit(long amount) throws InvalidAmountException {
+        if (amount <= 0) {
+            throw new InvalidAmountException("Deposit amount must be positive: " + amount);
+        }
         balance += amount;
     }
 
-    public boolean withdraw(long amount) {
-        if (canWithdraw(amount)) {
-            balance -= amount;
-            return true;
+    public void withdraw(long amount) throws InsufficientFundsException, InvalidAmountException {
+        if (amount <= 0) {
+            throw new InvalidAmountException("Withdrawal amount must be positive: " + amount);
         }
-        return false;
+        if (!canWithdraw(amount)) {
+            long shortfall = amount - balance;
+            if (shortfall < 0) {
+                shortfall = 0;
+            }
+            throw new InsufficientFundsException(
+                    "Insufficient funds in account " + accountNumber, shortfall);
+        }
+        balance -= amount;
+    }
+
+    public void transfer(Account to, long amount) throws BankException {
+        try {
+            this.withdraw(amount);
+            to.deposit(amount);
+        } catch (InsufficientFundsException | InvalidAmountException e) {
+            throw e;
+        } finally {
+            System.out.println("Transfer attempt from " + accountNumber
+                    + " to " + to.getAccountNumber() + " processed.");
+        }
     }
 
     public String getAccountNumber() {
