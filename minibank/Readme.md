@@ -7,6 +7,11 @@ MiniBank is a console-based banking application built as part of the OOP lab cou
 ```
 minibank/
 ├── MiniBank.java                 (package minibank)
+├── exception/                    (package minibank.exception)
+│   ├── BankException.java
+│   ├── InsufficientFundsException.java
+│   ├── AccountNotFoundException.java
+│   └── InvalidAmountException.java
 ├── model/                        (package minibank.model)
 │   ├── BankInfo.java
 │   ├── MenuOption.java
@@ -22,23 +27,19 @@ minibank/
 │   ├── Premium.java
 │   └── annotation/               (package minibank.model.annotation)
 │       ├── Id.java
-│       ├── MaxLength.java
-│       └── Positive.java
+│       ├── Positive.java
+│       └── MaxLength.java
 ├── util/                         (package minibank.util)
 │   ├── Validator.java
 │   ├── CommandParser.java
+│   ├── StatementFormatter.java
 │   ├── AnnotationValidator.java
-│   ├── TransactionLogger.java
-│   └── StatementFormatter.java
-├── service/
-│   ├── WithdrawRule.java         (package minibank.service)
-│   ├── Command.java              (package service)
-│   └── TransactionType.java      (package service)
-└── exception/                    (package minibank.exception)
-    ├── BankException.java
-    ├── AccountNotFoundException.java
-    ├── InsufficientFundsException.java
-    └── InvalidAmountException.java
+│   └── TransactionLogger.java
+└── service/
+    ├── WithdrawRule.java         (package minibank.service)
+    ├── AccountWorker.java        (package minibank.service)
+    ├── Command.java              (package service)
+    └── TransactionType.java      (package service)
 ```
 
 ## Features implemented
@@ -79,19 +80,45 @@ minibank/
 - `main` loops through an `Account[]` array calling `interestRate()` on each (runtime polymorphism), and uses an `instanceof` pattern check for `CurrentAccount`.
 
 **Interfaces, packages, and a runnable JAR**
-- `Transactable` — interface with `void deposit(long amount)` and `boolean withdraw(long amount)`; `Account` implements it.
+- `Transactable` — interface with `deposit(long amount)` and `withdraw(long amount)`; `Account` implements it.
 - `InterestBearing` — interface with a default method `yearlyInterest()` built from `interestRate()` and `getBalance()`; `Account` implements it, so every subclass gets `yearlyInterest()` for free.
 - `WithdrawRule` — a functional interface (`boolean allow(Account account, long amount)`) in the `service` package, demonstrated in `main` both as an anonymous class and as a lambda expression.
 - `Premium` — a marker interface with no methods.
-- All classes now live under the `model`, `util` and `service` packages, with proper `package` statements and imports; `MiniBank.java` uses one static import (`import static java.lang.System.out;`).
+- All classes live under the `model`, `util`, `service` and `exception` packages, with proper `package` statements and imports; `MiniBank.java` uses one static import (`import static java.lang.System.out;`).
 - The project builds into a runnable JAR with `Main-Class: minibank.MiniBank`, launched with `java -jar`.
+
+**Annotations and reflection-based validation**
+- All overridden methods (`toString`, `equals`, `hashCode` in `Account`; `interestRate()` and `canWithdraw()` in the subclasses; `clone()` and `toString()` in `Customer`) are marked with `@Override`. `WithdrawRule` is marked `@FunctionalInterface`.
+- `model.annotation` package — three custom annotations:
+  - `@Id` — marker annotation, `@Target(FIELD)` and `@Retention(RUNTIME)`.
+  - `@Positive` — has `String message()` defaulting to `"must be > 0"`.
+  - `@MaxLength` — has `int value()`.
+- `Account.accountNumber` is annotated `@Id`; `Account.balance` is annotated `@Positive`.
+- `AnnotationValidator.validate(Object obj)` — uses reflection (`getClass().getDeclaredFields()`, `field.isAnnotationPresent(...)`, `field.setAccessible(true)`, `field.get(obj)`) to check `@Positive` and `@MaxLength` rules and returns the error messages as a `String[]`. It walks up the class hierarchy so inherited fields (like `balance`, declared in the abstract `Account` class) are checked even when validating a subclass instance.
+- `main` creates a `SavingsAccount` with a negative balance and runs `AnnotationValidator.validate()`, printing the resulting error.
+
+**Custom exception hierarchy and fault tolerance**
+- `exception` package — a checked base class `BankException extends Exception`, with three subclasses:
+  - `InsufficientFundsException` — carries a `long shortfall` field.
+  - `AccountNotFoundException`.
+  - `InvalidAmountException`.
+- `Account.deposit(long amount)` throws `InvalidAmountException` for a non-positive amount, instead of silently doing nothing.
+- `Account.withdraw(long amount)` throws `InsufficientFundsException` (with the shortfall) when the balance is too low, and `InvalidAmountException` when the amount is non-positive — replacing the old boolean "flag" return value. The `Transactable` interface was updated to match.
+- `Account.transfer(Account to, long amount)` — withdraws from `this` and deposits into `to`, using `try`/`catch`/`finally`, and re-throws a `BankException` when the withdrawal or deposit fails.
+- `TransactionLogger` — a small `AutoCloseable` class used in a try-with-resources block in `main` to log the start/end of a transfer.
+- `main` wraps every deposit/withdraw/transfer call in try-catch blocks with friendly messages, uses `finally` blocks to confirm each attempt completed, and demonstrates try-with-resources around a transfer between two accounts.
+
+**Multithreading and synchronization**
+- `AccountWorker` — in the `service` package, implements `Runnable` with fields `account`, `times`, `amount`; `run()` calls `account.deposit(amount)` in a loop `times` times.
+- `main` creates one account and starts about 10 `AccountWorker` threads against it, joins each thread, then prints the thread names and the final balance.
+- `Account.deposit()` and `Account.withdraw()` are `synchronized`, so concurrent deposits no longer race and the final balance comes out correct.
 
 ## How to run
 
 ### Compile
 ```bash
 # from the folder that contains the "minibank" package folder
-javac minibank/*.java minibank/model/*.java minibank/util/*.java minibank/service/*.java -d out
+javac minibank/*.java minibank/exception/*.java minibank/model/*.java minibank/model/annotation/*.java minibank/util/*.java minibank/service/*.java -d out
 ```
 
 ### Run directly (without a JAR)

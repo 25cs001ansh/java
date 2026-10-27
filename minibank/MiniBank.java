@@ -13,6 +13,7 @@ import minibank.model.SavingsAccount;
 import minibank.exception.BankException;
 import minibank.exception.InsufficientFundsException;
 import minibank.exception.InvalidAmountException;
+import minibank.service.AccountWorker;
 import minibank.service.WithdrawRule;
 import minibank.util.AnnotationValidator;
 import minibank.util.CommandParser;
@@ -173,6 +174,37 @@ public class MiniBank {
             }
         }
         System.out.println("-------------------------------------\n");
+
+        // ---- AccountWorker thread demo ----
+        Account threadDemoAccount = new SavingsAccount("Thread Demo User", 0, 0);
+
+        int threadCount = 10;
+        Thread[] threads = new Thread[threadCount];
+        for (int i = 0; i < threadCount; i++) {
+            threads[i] = new Thread(new AccountWorker(threadDemoAccount, 100, 10));
+            threads[i].setName("Worker-" + (i + 1));
+        }
+
+        for (Thread t : threads) {
+            t.start();
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        System.out.println("----- Thread Names -----");
+        for (Thread t : threads) {
+            System.out.println(t.getName());
+        }
+        System.out.println("-------------------------");
+
+        System.out.println("Final balance after concurrent deposits: " + threadDemoAccount.getBalance());
+        System.out.println();
 
         Scanner sc = new Scanner(System.in);
         int choice;
