@@ -44,7 +44,8 @@ minibank/
     ├── TransactionProcessor.java
     ├── TransactionTask.java
     ├── TransactionBuffer.java
-    └── AccountStore.java
+    ├── AccountStore.java
+    └── Repository.java
 ```
 
 ## Features implemented
@@ -118,10 +119,7 @@ minibank/
 - `main` creates one account and starts about 10 `AccountWorker` threads against it, joins each thread, then prints the thread names and the final balance.
 - `Account.deposit()` and `Account.withdraw()` are `synchronized`, so concurrent deposits no longer race and the final balance comes out correct.
 
-
-
-## Thread pools, producer-consumer, and deadlock avoidance
-
+**Thread pools, producer-consumer, and deadlock avoidance**
 - `TransactionProcessor` — wraps an `ExecutorService` created with `Executors.newFixedThreadPool(4)`. `submit(Runnable task)` calls `execute()`; `stop()` calls `shutdown()` then `awaitTermination()`.
 - `TransactionTask` — a `Runnable` that performs a single deposit or withdrawal on an `Account`. `main` submits 20 of these (alternating deposit/withdraw) to a `TransactionProcessor`, then stops it and prints the final balance.
 - `TransactionBuffer` — a simple bounded array buffer with synchronized `produce()`/`consume()` methods using `wait()`/`notify()`. `main` runs one producer thread adding `TransactionTask`s to the buffer and one consumer thread taking and running them, then prints the final balance.
@@ -130,20 +128,25 @@ minibank/
   - `transfer(Account to, long amount)` — the fixed version. It always locks the two accounts in a consistent order (the one with the smaller `accountNumber` first) using nested `synchronized` blocks before calling `withdraw()`/`deposit()`, so opposite-direction transfers can never deadlock.
   - `main` starts two threads doing `A.transfer(B, 100)` and `B.transfer(A, 100)` concurrently and shows both complete cleanly.
 
-## Persistence and end-of-day reporting
-
-- `Account` (and `SavingsAccount`, `CurrentAccount`, `FixedDepositAccount`) and `Customer` (and its nested `Address`) now implement `Serializable`, each with its own `private static final long serialVersionUID`.
+**Persistence and end-of-day reporting**
+- `Account` (and `SavingsAccount`, `CurrentAccount`, `FixedDepositAccount`) and `Customer` now implement `Serializable`, each with its own `private static final long serialVersionUID`.
 - `StatePersister` — `save(Account[] accounts, Path file)` writes the array with an `ObjectOutputStream` inside try-with-resources; `load(Path file)` reads it back with an `ObjectInputStream`.
 - `TransactionLog` — `append(Path file, String line)` uses `Files.write(...)` with `CREATE` and `APPEND` to add one line to an append-only log file.
 - `ReportGenerator` — `generateReport(Path logsFolder, Path reportFile)` walks the logs folder with `Files.newDirectoryStream`, reads each file line by line with a `BufferedReader`, sums total deposits and withdrawals, reads each file's size and last-modified time with `Files.readAttributes`, and writes the summary to a report file.
 - `main` saves the current accounts to `data/accounts.dat`, reloads them into a new array and prints them to confirm the data survived, appends a few sample transaction lines to `data/logs/transactions.log`, then generates and prints the end-of-day report (`data/report.txt`).
 
-## Collections Framework storage
-
+**Collections Framework storage**
 - `AccountStore` — keeps accounts in a `HashMap<String, Account>` keyed by account number, with `add(Account)`, `get(String accountNumber)` and `getAll()`; keeps a transaction history in an `ArrayList<String>`; `sortedByBalance()` returns an `ArrayList<Account>` sorted with a `Comparator`.
 - `Account` now implements `Comparable<Account>`, comparing by `accountNumber` in `compareTo()`.
 - `TransactionProcessor` keeps its shared accounts in a `ConcurrentHashMap<String, Account>` for thread-safe access.
 - `main` adds several accounts to an `AccountStore` and prints them sorted by balance.
+
+**Generic Repository<T>**
+- `Repository<T>` — a generic class holding a `HashMap<String, T>`, with `save(T entity)`, `findById(String id)`, `findAll()` returning an `ArrayList<T>`, and `delete(String id)`.
+- `save()` finds each entity's key by reflection: it walks the class hierarchy looking for the field marked `@Id` and reads its value as the map key, so it works for any entity type without hardcoding a key field.
+- `saveAll(T... items)` — marked `@SafeVarargs`, saves several objects at once.
+- `average(N[] values)` — a generic method with a bounded type parameter (`<N extends Number>`) that averages an array of any `Number` subtype.
+- `main` creates a `Repository<Account>`, saves all the existing accounts with `saveAll()`, fetches one back by id, and prints every account in the repository.
 
 ## How to run
 

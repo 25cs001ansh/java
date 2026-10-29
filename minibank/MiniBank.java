@@ -19,6 +19,7 @@ import minibank.exception.InsufficientFundsException;
 import minibank.exception.InvalidAmountException;
 import minibank.service.AccountStore;
 import minibank.service.AccountWorker;
+import minibank.service.Repository;
 import minibank.service.TransactionBuffer;
 import minibank.service.TransactionProcessor;
 import minibank.service.TransactionTask;
@@ -366,6 +367,18 @@ public class MiniBank {
             System.out.println(acc);
         }
         System.out.println("---------------------------------------\n");
+
+        // ---- Repository<Account> demo ----
+        Repository<Account> accountRepository = new Repository<>();
+        accountRepository.saveAll(accounts);
+
+        Account fetchedAccount = accountRepository.findById(accounts[0].getAccountNumber());
+        System.out.println("----- Repository Demo -----");
+        System.out.println("Fetched by id " + accounts[0].getAccountNumber() + ": " + fetchedAccount);
+        for (Account acc : accountRepository.findAll()) {
+            System.out.println(acc);
+        }
+        System.out.println("-----------------------------\n");
 
         Scanner sc = new Scanner(System.in);
         int choice;
