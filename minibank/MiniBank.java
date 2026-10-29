@@ -17,6 +17,7 @@ import minibank.model.TransactionType;
 import minibank.exception.BankException;
 import minibank.exception.InsufficientFundsException;
 import minibank.exception.InvalidAmountException;
+import minibank.service.AccountStore;
 import minibank.service.AccountWorker;
 import minibank.service.TransactionBuffer;
 import minibank.service.TransactionProcessor;
@@ -353,6 +354,18 @@ public class MiniBank {
         } catch (IOException e) {
             System.out.println("Report generation failed: " + e.getMessage());
         }
+
+        // ---- AccountStore demo: add accounts, print sorted by balance ----
+        AccountStore accountStore = new AccountStore();
+        for (Account acc : accounts) {
+            accountStore.add(acc);
+        }
+
+        System.out.println("----- Accounts Sorted By Balance -----");
+        for (Account acc : accountStore.sortedByBalance()) {
+            System.out.println(acc);
+        }
+        System.out.println("---------------------------------------\n");
 
         Scanner sc = new Scanner(System.in);
         int choice;

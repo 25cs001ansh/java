@@ -7,7 +7,7 @@ import minibank.exception.InvalidAmountException;
 import minibank.model.annotation.Id;
 import minibank.model.annotation.Positive;
 
-public abstract class Account implements Transactable, InterestBearing, Serializable {
+public abstract class Account implements Transactable, InterestBearing, Serializable, Comparable<Account> {
 
     private static final long serialVersionUID = 1L;
 
@@ -145,5 +145,10 @@ public abstract class Account implements Transactable, InterestBearing, Serializ
     @Override
     public int hashCode() {
         return accountNumber.hashCode();
+    }
+
+    @Override
+    public int compareTo(Account other) {
+        return this.accountNumber.compareTo(other.accountNumber);
     }
 }
