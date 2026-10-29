@@ -35,11 +35,12 @@ minibank/
 │   ├── StatementFormatter.java
 │   ├── AnnotationValidator.java
 │   └── TransactionLogger.java
-└── service/
-    ├── WithdrawRule.java         (package minibank.service)
-    ├── AccountWorker.java        (package minibank.service)
-    ├── Command.java              (package service)
-    └── TransactionType.java      (package service)
+└── service/                      (package minibank.service)
+    ├── WithdrawRule.java
+    ├── AccountWorker.java
+    ├── TransactionProcessor.java
+    ├── TransactionTask.java
+    └── TransactionBuffer.java
 ```
 
 ## Features implemented
@@ -144,3 +145,13 @@ Future work will run every menu action through the validation, command-parsing, 
 
 ## Author
 Ansh — Roll No: 25CS001
+
+## Thread pools, producer-consumer, and deadlock avoidance
+
+- `TransactionProcessor` — wraps an `ExecutorService` created with `Executors.newFixedThreadPool(4)`. `submit(Runnable task)` calls `execute()`; `stop()` calls `shutdown()` then `awaitTermination()`.
+- `TransactionTask` — a `Runnable` that performs a single deposit or withdrawal on an `Account`. `main` submits 20 of these (alternating deposit/withdraw) to a `TransactionProcessor`, then stops it and prints the final balance.
+- `TransactionBuffer` — a simple bounded array buffer with synchronized `produce()`/`consume()` methods using `wait()`/`notify()`. `main` runs one producer thread adding `TransactionTask`s to the buffer and one consumer thread taking and running them, then prints the final balance.
+- Deadlock in `Account`:
+  - `transferUnsafe(Account to, long amount)` — the original transfer logic, kept as a reference. It locks `this` (via `withdraw()`) then `to` (via `deposit()`) with no consistent ordering, so two threads calling `a.transferUnsafe(b, x)` and `b.transferUnsafe(a, y)` at the same time can deadlock.
+  - `transfer(Account to, long amount)` — the fixed version. It always locks the two accounts in a consistent order (the one with the smaller `accountNumber` first) using nested `synchronized` blocks before calling `withdraw()`/`deposit()`, so opposite-direction transfers can never deadlock.
+  - `main` starts two threads doing `A.transfer(B, 100)` and `B.transfer(A, 100)` concurrently and shows both complete cleanly.

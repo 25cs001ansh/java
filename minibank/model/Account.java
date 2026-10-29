@@ -59,15 +59,49 @@ public abstract class Account implements Transactable, InterestBearing {
         balance -= amount;
     }
 
-    public void transfer(Account to, long amount) throws BankException {
+    /**
+     * Deadlock-prone version: withdraw() locks "this" first, then deposit()
+     * locks "to", with no consistent ordering across accounts. If one thread
+     * runs a.transferUnsafe(b, x) while another runs b.transferUnsafe(a, y)
+     * at the same time, each thread can end up holding one account's lock
+     * while waiting forever for the other's -> deadlock.
+     */
+    public void transferUnsafe(Account to, long amount) throws BankException {
         try {
             this.withdraw(amount);
             to.deposit(amount);
         } catch (InsufficientFundsException | InvalidAmountException e) {
             throw e;
         } finally {
-            System.out.println("Transfer attempt from " + accountNumber
+            System.out.println("Unsafe transfer attempt from " + accountNumber
                     + " to " + to.getAccountNumber() + " processed.");
+        }
+    }
+
+    /**
+     * Deadlock-free version: both accounts are locked in a consistent order
+     * (the account with the smaller accountNumber first), regardless of which
+     * account transfer() was called on. Two threads transferring in opposite
+     * directions (A to B and B to A) then always try to acquire the locks in
+     * the same order, so they can never hold one lock while waiting on the
+     * other.
+     */
+    public void transfer(Account to, long amount) throws BankException {
+        Account lockFirst = this.accountNumber.compareTo(to.accountNumber) <= 0 ? this : to;
+        Account lockSecond = this.accountNumber.compareTo(to.accountNumber) <= 0 ? to : this;
+
+        synchronized (lockFirst) {
+            synchronized (lockSecond) {
+                try {
+                    this.withdraw(amount);
+                    to.deposit(amount);
+                } catch (InsufficientFundsException | InvalidAmountException e) {
+                    throw e;
+                } finally {
+                    System.out.println("Transfer attempt from " + accountNumber
+                            + " to " + to.getAccountNumber() + " processed.");
+                }
+            }
         }
     }
 

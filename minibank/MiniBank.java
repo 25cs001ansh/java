@@ -10,10 +10,14 @@ import minibank.model.Customer;
 import minibank.model.FixedDepositAccount;
 import minibank.model.MenuOption;
 import minibank.model.SavingsAccount;
+import minibank.model.TransactionType;
 import minibank.exception.BankException;
 import minibank.exception.InsufficientFundsException;
 import minibank.exception.InvalidAmountException;
 import minibank.service.AccountWorker;
+import minibank.service.TransactionBuffer;
+import minibank.service.TransactionProcessor;
+import minibank.service.TransactionTask;
 import minibank.service.WithdrawRule;
 import minibank.util.AnnotationValidator;
 import minibank.util.CommandParser;
@@ -205,6 +209,96 @@ public class MiniBank {
 
         System.out.println("Final balance after concurrent deposits: " + threadDemoAccount.getBalance());
         System.out.println();
+
+        // ---- TransactionProcessor demo: fixed thread pool ----
+        Account poolAccount = new CurrentAccount("Pool Demo User", 0, 5000);
+        TransactionProcessor processor = new TransactionProcessor();
+
+        for (int i = 0; i < 20; i++) {
+            TransactionType type = (i % 2 == 0) ? TransactionType.DEPOSIT : TransactionType.WITHDRAW;
+            processor.submit(new TransactionTask(poolAccount, type, 50));
+        }
+
+        processor.stop();
+        System.out.println("----- TransactionProcessor Demo -----");
+        System.out.println("Final balance after pooled transactions: " + poolAccount.getBalance());
+        System.out.println("--------------------------------------\n");
+
+        // ---- Producer-consumer demo: wait()/notify() on a shared buffer ----
+        TransactionBuffer buffer = new TransactionBuffer(5);
+        Account pcAccount = new SavingsAccount("Producer Consumer User", 1000, 0);
+
+        Thread producer = new Thread(() -> {
+            try {
+                for (int i = 0; i < 5; i++) {
+                    buffer.produce(new TransactionTask(pcAccount, TransactionType.DEPOSIT, 100));
+                    System.out.println(Thread.currentThread().getName() + " produced transaction " + (i + 1));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "Producer");
+
+        Thread consumer = new Thread(() -> {
+            try {
+                for (int i = 0; i < 5; i++) {
+                    Runnable task = buffer.consume();
+                    task.run();
+                    System.out.println(Thread.currentThread().getName() + " consumed transaction " + (i + 1));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "Consumer");
+
+        producer.start();
+        consumer.start();
+
+        try {
+            producer.join();
+            consumer.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        System.out.println("----- Producer-Consumer Demo -----");
+        System.out.println("Final balance: " + pcAccount.getBalance());
+        System.out.println("-----------------------------------\n");
+
+        // ---- Deadlock avoidance demo: consistent lock ordering in transfer() ----
+        Account accA = new SavingsAccount("Account A", 5000, 0);
+        Account accB = new SavingsAccount("Account B", 5000, 0);
+
+        Thread transferAtoB = new Thread(() -> {
+            try {
+                accA.transfer(accB, 100);
+            } catch (BankException e) {
+                System.out.println("Transfer A->B failed: " + e.getMessage());
+            }
+        }, "Transfer-A-to-B");
+
+        Thread transferBtoA = new Thread(() -> {
+            try {
+                accB.transfer(accA, 100);
+            } catch (BankException e) {
+                System.out.println("Transfer B->A failed: " + e.getMessage());
+            }
+        }, "Transfer-B-to-A");
+
+        transferAtoB.start();
+        transferBtoA.start();
+
+        try {
+            transferAtoB.join();
+            transferBtoA.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        System.out.println("----- Deadlock Avoidance Demo -----");
+        System.out.println("Completed without deadlock. Balance A: " + accA.getBalance()
+                + ", Balance B: " + accB.getBalance());
+        System.out.println("------------------------------------\n");
 
         Scanner sc = new Scanner(System.in);
         int choice;
