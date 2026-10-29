@@ -1,12 +1,15 @@
 package minibank.model;
 
+import java.io.Serializable;
 import minibank.exception.BankException;
 import minibank.exception.InsufficientFundsException;
 import minibank.exception.InvalidAmountException;
 import minibank.model.annotation.Id;
 import minibank.model.annotation.Positive;
 
-public abstract class Account implements Transactable, InterestBearing {
+public abstract class Account implements Transactable, InterestBearing, Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     private final String accountNumber;

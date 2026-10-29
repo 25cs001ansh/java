@@ -1,5 +1,8 @@
 package minibank;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 import minibank.model.Account;
@@ -21,7 +24,10 @@ import minibank.service.TransactionTask;
 import minibank.service.WithdrawRule;
 import minibank.util.AnnotationValidator;
 import minibank.util.CommandParser;
+import minibank.util.ReportGenerator;
+import minibank.util.StatePersister;
 import minibank.util.StatementFormatter;
+import minibank.util.TransactionLog;
 import minibank.util.TransactionLogger;
 import minibank.util.Validator;
 
@@ -299,6 +305,54 @@ public class MiniBank {
         System.out.println("Completed without deadlock. Balance A: " + accA.getBalance()
                 + ", Balance B: " + accB.getBalance());
         System.out.println("------------------------------------\n");
+
+        // ---- Persistence demo: save accounts, reload, confirm survival ----
+        Path dataDir = Path.of("data");
+        Path logsDir = dataDir.resolve("logs");
+        Path accountsFile = dataDir.resolve("accounts.dat");
+        Path logFile = logsDir.resolve("transactions.log");
+        Path reportFile = dataDir.resolve("report.txt");
+
+        try {
+            Files.createDirectories(logsDir);
+        } catch (IOException e) {
+            System.out.println("Could not create data directories: " + e.getMessage());
+        }
+
+        try {
+            StatePersister.save(accounts, accountsFile);
+            System.out.println("Accounts saved to " + accountsFile);
+        } catch (IOException e) {
+            System.out.println("Save failed: " + e.getMessage());
+        }
+
+        try {
+            Account[] reloadedAccounts = StatePersister.load(accountsFile);
+            System.out.println("----- Reloaded Accounts -----");
+            for (Account acc : reloadedAccounts) {
+                System.out.println(acc);
+            }
+            System.out.println("------------------------------\n");
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Load failed: " + e.getMessage());
+        }
+
+        // ---- Transaction log demo ----
+        try {
+            TransactionLog.append(logFile, "DEPOSIT " + accounts[0].getAccountNumber() + " 500");
+            TransactionLog.append(logFile, "WITHDRAW " + accounts[1].getAccountNumber() + " 200");
+            TransactionLog.append(logFile, "DEPOSIT " + accounts[2].getAccountNumber() + " 300");
+        } catch (IOException e) {
+            System.out.println("Logging failed: " + e.getMessage());
+        }
+
+        // ---- Report generation demo ----
+        try {
+            String report = ReportGenerator.generateReport(logsDir, reportFile);
+            System.out.println(report);
+        } catch (IOException e) {
+            System.out.println("Report generation failed: " + e.getMessage());
+        }
 
         Scanner sc = new Scanner(System.in);
         int choice;
