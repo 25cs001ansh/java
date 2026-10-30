@@ -1,12 +1,13 @@
 # MiniBank
 
-MiniBank is a console-based banking application built as part of the OOP lab course. It is developed incrementally — each part adds a new piece to the same project, and later parts build on the classes created earlier.
+MiniBank is a console-based banking application built as part of the OOP lab course. It is developed incrementally — each part adds a new piece to the same project, and later parts build on the classes created earlier. This is the final, capstone version: the Practical 1 menu now calls real `BankService` operations instead of placeholder text.
 
 ## Package structure
 
 ```
 minibank/
 ├── MiniBank.java                 (package minibank)
+├── AccountTest.java               (package minibank — JUnit 5 tests)
 ├── exception/                    (package minibank.exception)
 │   ├── BankException.java
 │   ├── InsufficientFundsException.java
@@ -28,7 +29,8 @@ minibank/
 │   └── annotation/               (package minibank.model.annotation)
 │       ├── Id.java
 │       ├── Positive.java
-│       └── MaxLength.java
+│       ├── MaxLength.java
+│       └── Audit.java
 ├── util/                         (package minibank.util)
 │   ├── Validator.java
 │   ├── CommandParser.java
@@ -37,7 +39,8 @@ minibank/
 │   ├── TransactionLogger.java
 │   ├── StatePersister.java
 │   ├── TransactionLog.java
-│   └── ReportGenerator.java
+│   ├── ReportGenerator.java
+│   └── AuditLogger.java
 └── service/                      (package minibank.service)
     ├── WithdrawRule.java
     ├── AccountWorker.java
@@ -45,7 +48,8 @@ minibank/
     ├── TransactionTask.java
     ├── TransactionBuffer.java
     ├── AccountStore.java
-    └── Repository.java
+    ├── Repository.java
+    └── BankService.java
 ```
 
 ## Features implemented
@@ -53,26 +57,22 @@ minibank/
 **Menu shell**
 - `MiniBank` — public class containing the `main` method.
 - `BankInfo` — a record with `name` and `branch` fields, printed as the application header.
-- `MenuOption` — an enum with constants `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `TRANSFER`, `EXIT`.
+- `MenuOption` — an enum with constants `OPEN_ACCOUNT`, `DEPOSIT`, `WITHDRAW`, `TRANSFER`, `PROCESS_BATCH`, `REPORT`, `EXIT`.
 - A numbered menu displayed in a loop, read via `Scanner`.
-- A switch expression that prints a placeholder message for each selected option.
-- The loop exits and prints a goodbye message when `EXIT` is chosen.
 
 **Customer and Account classes**
-- `Customer` — private fields `name`, `email`, `mobile`, and a `final` `customerId`, auto-generated (e.g. `CUST101`) via a private static counter and `generateCustomerId()`. Constructor and public getters only.
+- `Customer` — private fields `name`, `email`, `mobile`, and a `final` `customerId`, auto-generated (e.g. `CUST101`). Constructor and public getters only.
 - `Account` — private fields: `final accountNumber`, `ownerName`, `balance` (whole rupees), `active`. Account numbers are auto-generated (e.g. `AC0001`).
   - Two constructors: `Account(ownerName, openingBalance)` and `Account(ownerName)` which delegates via `this(ownerName, 0)`.
-  - `deposit(long amount)` adds to balance; `withdraw(long amount)` delegates to `canWithdraw(amount)`.
   - No public setter for `balance` — encapsulation is enforced.
 
 **Object behaviour — toString, equals/hashCode, nested Address, clone**
-- `Account.toString()` — readable line with `accountNumber`, `ownerName`, `balance`.
-- `Account.equals()` / `Account.hashCode()` — two accounts are equal when their `accountNumber` values are equal.
-- `Customer.Address` — a public static nested class with `line`, `city`, `pincode` fields and getters; `Customer` holds an `Address` field with `getAddress()`.
+- `Account.toString()`, `Account.equals()`/`hashCode()` (by `accountNumber`), `Account.compareTo()` (by `accountNumber`).
+- `Customer.Address` — a public static nested class with `line`, `city`, `pincode` fields and getters.
 - `Customer` implements `Cloneable` and overrides `clone()`.
 
 **Validation and command parsing**
-- `Validator` — static regex-based methods using compiled `Pattern`: `isValidMobile`, `isValidEmail`, `isValidPan`, `isValidIfsc`.
+- `Validator` — static regex-based methods: `isValidMobile`, `isValidEmail`, `isValidPan`, `isValidIfsc`.
 - `TransactionType` — enum: `DEPOSIT`, `WITHDRAW`, `TRANSFER`.
 - `Command` — record: `type`, `accountNumber`, `amount`.
 - `CommandParser.parse(String line)` — splits a line like `"DEPOSIT AC0001 500"` into a `Command`.
@@ -83,70 +83,63 @@ minibank/
 - `SavingsAccount` — `minBalance` field; interest `4.0`; withdrawal allowed only if balance stays `>= minBalance`.
 - `CurrentAccount` — `overdraftLimit` field; interest `0`; balance can fall to `-overdraftLimit`.
 - `FixedDepositAccount` — interest `7.0`; withdrawals always blocked.
-- `main` loops through an `Account[]` array calling `interestRate()` on each (runtime polymorphism), and uses an `instanceof` pattern check for `CurrentAccount`.
 
 **Interfaces, packages, and a runnable JAR**
-- `Transactable` — interface with `deposit(long amount)` and `withdraw(long amount)`; `Account` implements it.
-- `InterestBearing` — interface with a default method `yearlyInterest()` built from `interestRate()` and `getBalance()`; `Account` implements it, so every subclass gets `yearlyInterest()` for free.
-- `WithdrawRule` — a functional interface (`boolean allow(Account account, long amount)`) in the `service` package, demonstrated in `main` both as an anonymous class and as a lambda expression.
-- `Premium` — a marker interface with no methods.
-- All classes live under the `model`, `util`, `service` and `exception` packages, with proper `package` statements and imports; `MiniBank.java` uses one static import (`import static java.lang.System.out;`).
-- The project builds into a runnable JAR with `Main-Class: minibank.MiniBank`, launched with `java -jar`.
+- `Transactable`, `InterestBearing` (default `yearlyInterest()`), `WithdrawRule` (functional interface), `Premium` (marker interface).
+- All classes live under `model`, `util`, `service` and `exception` packages.
 
 **Annotations and reflection-based validation**
-- All overridden methods (`toString`, `equals`, `hashCode` in `Account`; `interestRate()` and `canWithdraw()` in the subclasses; `clone()` and `toString()` in `Customer`) are marked with `@Override`. `WithdrawRule` is marked `@FunctionalInterface`.
-- `model.annotation` package — three custom annotations:
-  - `@Id` — marker annotation, `@Target(FIELD)` and `@Retention(RUNTIME)`.
-  - `@Positive` — has `String message()` defaulting to `"must be > 0"`.
-  - `@MaxLength` — has `int value()`.
-- `Account.accountNumber` is annotated `@Id`; `Account.balance` is annotated `@Positive`.
-- `AnnotationValidator.validate(Object obj)` — uses reflection (`getClass().getDeclaredFields()`, `field.isAnnotationPresent(...)`, `field.setAccessible(true)`, `field.get(obj)`) to check `@Positive` and `@MaxLength` rules and returns the error messages as a `String[]`. It walks up the class hierarchy so inherited fields (like `balance`, declared in the abstract `Account` class) are checked even when validating a subclass instance.
-- `main` creates a `SavingsAccount` with a negative balance and runs `AnnotationValidator.validate()`, printing the resulting error.
+- `model.annotation` package: `@Id`, `@Positive(message)`, `@MaxLength(value)`, `@Audit`.
+- `Account.accountNumber` is `@Id`; `Account.balance` is `@Positive`.
+- `AnnotationValidator.validate(Object obj)` — reflection-based field validation, walking the class hierarchy.
 
 **Custom exception hierarchy and fault tolerance**
-- `exception` package — a checked base class `BankException extends Exception`, with three subclasses:
-  - `InsufficientFundsException` — carries a `long shortfall` field.
-  - `AccountNotFoundException`.
-  - `InvalidAmountException`.
-- `Account.deposit(long amount)` throws `InvalidAmountException` for a non-positive amount, instead of silently doing nothing.
-- `Account.withdraw(long amount)` throws `InsufficientFundsException` (with the shortfall) when the balance is too low, and `InvalidAmountException` when the amount is non-positive — replacing the old boolean "flag" return value. The `Transactable` interface was updated to match.
-- `Account.transfer(Account to, long amount)` — withdraws from `this` and deposits into `to`, using `try`/`catch`/`finally`, and re-throws a `BankException` when the withdrawal or deposit fails.
-- `TransactionLogger` — a small `AutoCloseable` class used in a try-with-resources block in `main` to log the start/end of a transfer.
-- `main` wraps every deposit/withdraw/transfer call in try-catch blocks with friendly messages, uses `finally` blocks to confirm each attempt completed, and demonstrates try-with-resources around a transfer between two accounts.
+- `BankException` (checked base) with `InsufficientFundsException` (carries `shortfall`), `AccountNotFoundException`, `InvalidAmountException`.
+- `Account.deposit()`/`withdraw()` throw these instead of returning a boolean flag.
+- `Account.transfer(Account to, long amount)` — try/catch/finally, re-throws `BankException`.
+- `TransactionLogger` — a small `AutoCloseable` class for try-with-resources demos.
 
-**Multithreading and synchronization**
-- `AccountWorker` — in the `service` package, implements `Runnable` with fields `account`, `times`, `amount`; `run()` calls `account.deposit(amount)` in a loop `times` times.
-- `main` creates one account and starts about 10 `AccountWorker` threads against it, joins each thread, then prints the thread names and the final balance.
-- `Account.deposit()` and `Account.withdraw()` are `synchronized`, so concurrent deposits no longer race and the final balance comes out correct.
-
-**Thread pools, producer-consumer, and deadlock avoidance**
-- `TransactionProcessor` — wraps an `ExecutorService` created with `Executors.newFixedThreadPool(4)`. `submit(Runnable task)` calls `execute()`; `stop()` calls `shutdown()` then `awaitTermination()`.
-- `TransactionTask` — a `Runnable` that performs a single deposit or withdrawal on an `Account`. `main` submits 20 of these (alternating deposit/withdraw) to a `TransactionProcessor`, then stops it and prints the final balance.
-- `TransactionBuffer` — a simple bounded array buffer with synchronized `produce()`/`consume()` methods using `wait()`/`notify()`. `main` runs one producer thread adding `TransactionTask`s to the buffer and one consumer thread taking and running them, then prints the final balance.
-- Deadlock in `Account`:
-  - `transferUnsafe(Account to, long amount)` — the original transfer logic, kept as a reference. It locks `this` (via `withdraw()`) then `to` (via `deposit()`) with no consistent ordering, so two threads calling `a.transferUnsafe(b, x)` and `b.transferUnsafe(a, y)` at the same time can deadlock.
-  - `transfer(Account to, long amount)` — the fixed version. It always locks the two accounts in a consistent order (the one with the smaller `accountNumber` first) using nested `synchronized` blocks before calling `withdraw()`/`deposit()`, so opposite-direction transfers can never deadlock.
-  - `main` starts two threads doing `A.transfer(B, 100)` and `B.transfer(A, 100)` concurrently and shows both complete cleanly.
+**Multithreading, thread pools, producer-consumer, deadlock avoidance**
+- `AccountWorker` (`Runnable`, repeated deposits), `Account.deposit()`/`withdraw()` are `synchronized`.
+- `TransactionProcessor` wraps a fixed thread pool (`submit`/`stop`), now also keeps shared accounts in a `ConcurrentHashMap`.
+- `TransactionTask` — one deposit or withdrawal as a `Runnable`.
+- `TransactionBuffer` — bounded buffer with `wait()`/`notify()` for a producer-consumer demo.
+- `Account.transferUnsafe()` (deadlock-prone, kept as reference) vs `Account.transfer()` (deadlock-free via consistent lock ordering by `accountNumber`).
 
 **Persistence and end-of-day reporting**
-- `Account` (and `SavingsAccount`, `CurrentAccount`, `FixedDepositAccount`) and `Customer` now implement `Serializable`, each with its own `private static final long serialVersionUID`.
-- `StatePersister` — `save(Account[] accounts, Path file)` writes the array with an `ObjectOutputStream` inside try-with-resources; `load(Path file)` reads it back with an `ObjectInputStream`.
-- `TransactionLog` — `append(Path file, String line)` uses `Files.write(...)` with `CREATE` and `APPEND` to add one line to an append-only log file.
-- `ReportGenerator` — `generateReport(Path logsFolder, Path reportFile)` walks the logs folder with `Files.newDirectoryStream`, reads each file line by line with a `BufferedReader`, sums total deposits and withdrawals, reads each file's size and last-modified time with `Files.readAttributes`, and writes the summary to a report file.
-- `main` saves the current accounts to `data/accounts.dat`, reloads them into a new array and prints them to confirm the data survived, appends a few sample transaction lines to `data/logs/transactions.log`, then generates and prints the end-of-day report (`data/report.txt`).
+- `Account` hierarchy and `Customer` implement `Serializable` with `serialVersionUID`.
+- `StatePersister.save()/load()` — `Account[]` via `ObjectOutputStream`/`ObjectInputStream`.
+- `TransactionLog.append()` — append-only log via `Files.write(..., CREATE, APPEND)`.
+- `ReportGenerator.generateReport()` — walks a logs folder with NIO, sums deposits/withdrawals, reads file attributes, writes a summary report.
 
 **Collections Framework storage**
-- `AccountStore` — keeps accounts in a `HashMap<String, Account>` keyed by account number, with `add(Account)`, `get(String accountNumber)` and `getAll()`; keeps a transaction history in an `ArrayList<String>`; `sortedByBalance()` returns an `ArrayList<Account>` sorted with a `Comparator`.
-- `Account` now implements `Comparable<Account>`, comparing by `accountNumber` in `compareTo()`.
-- `TransactionProcessor` keeps its shared accounts in a `ConcurrentHashMap<String, Account>` for thread-safe access.
-- `main` adds several accounts to an `AccountStore` and prints them sorted by balance.
+- `AccountStore` — `HashMap<String, Account>`-backed store with `add`/`get`/`getAll`, an `ArrayList<String>` transaction history, and `sortedByBalance()`.
+- `Account implements Comparable<Account>` (by `accountNumber`).
 
 **Generic Repository<T>**
-- `Repository<T>` — a generic class holding a `HashMap<String, T>`, with `save(T entity)`, `findById(String id)`, `findAll()` returning an `ArrayList<T>`, and `delete(String id)`.
-- `save()` finds each entity's key by reflection: it walks the class hierarchy looking for the field marked `@Id` and reads its value as the map key, so it works for any entity type without hardcoding a key field.
-- `saveAll(T... items)` — marked `@SafeVarargs`, saves several objects at once.
-- `average(N[] values)` — a generic method with a bounded type parameter (`<N extends Number>`) that averages an array of any `Number` subtype.
-- `main` creates a `Repository<Account>`, saves all the existing accounts with `saveAll()`, fetches one back by id, and prints every account in the repository.
+- `Repository<T>` — generic `HashMap<String, T>`-backed store with `save`, `findById`, `findAll`, `delete`.
+- `save()` finds each entity's key by reflection on the `@Id` field, walking the class hierarchy.
+- `saveAll(T... items)` — `@SafeVarargs`.
+- `average(N[] values)` — generic method with a bounded type parameter (`<N extends Number>`).
+
+**Capstone: BankService, the real menu, batch processing, auditing, and tests**
+- `BankService` — wires `Repository<Account>`, `Validator`, and the exception hierarchy together:
+  - `openAccount(type, ownerName, mobile, openingBalance, limitValue)` — validates the mobile number with `Validator.isValidMobile()`, then creates a `SavingsAccount`, `CurrentAccount`, or `FixedDepositAccount` and saves it to the repository.
+  - `deposit(accountNumber, amount)`, `withdraw(accountNumber, amount)`, `transfer(from, to, amount)` — look the account(s) up in the repository, throwing `AccountNotFoundException` if missing, and otherwise delegate to `Account`.
+  - `statement(accountNumber)` — returns a formatted statement via `StatementFormatter`.
+  - `listAccounts()` — returns every account in the repository.
+- The Practical 1 menu is now wired to real operations:
+  - **Open Account** / **Deposit** / **Withdraw** / **Transfer** call the matching `BankService` method, reading input with `Scanner` and printing friendly error messages on exception. Deposits and withdrawals are also appended to the transaction log.
+  - **Process Batch** registers every account into a `TransactionProcessor`'s thread-safe `ConcurrentHashMap` and submits a batch of sample deposit/withdraw `TransactionTask`s, processed safely across the thread pool.
+  - **Report** generates and prints the end-of-day report from the logs folder.
+  - **Exit** saves every account in the repository back to `data/accounts.dat` before printing the goodbye message.
+  - On start-up, if `data/accounts.dat` exists, its accounts are loaded into the repository before the menu runs; otherwise MiniBank starts with an empty, real account book (all the standalone feature demos from earlier labs still run as before, on their own separate sandbox accounts, so they're unaffected by whether any real accounts have been saved yet).
+- `@Audit` — a marker annotation (`model.annotation.Audit`) placed on `BankService.openAccount`, `deposit`, `withdraw`, and `transfer`.
+- `AuditLogger.logIfAudited(target, methodName)` — reflectively checks whether the named method on `target`'s class carries `@Audit`, and if so prints an audit line with a timestamp. Called at the top of every audited `BankService` method.
+- `AccountTest` (`minibank.AccountTest`) — JUnit 5 tests using `@Test`:
+  - `depositIncreasesBalance()` — a deposit increases the balance by the deposited amount.
+  - `withdrawalOverLimitThrowsException()` — withdrawing beyond what the account allows throws `InsufficientFundsException`.
+  - `concurrentDepositsKeepBalanceCorrect()` — 10 `AccountWorker` threads depositing concurrently still produce the correct final balance, thanks to `synchronized` deposit/withdraw.
 
 ## How to run
 
@@ -155,10 +148,18 @@ minibank/
 # from the folder that contains the "minibank" package folder
 javac minibank/*.java minibank/exception/*.java minibank/model/*.java minibank/model/annotation/*.java minibank/util/*.java minibank/service/*.java -d out
 ```
+`AccountTest.java` needs JUnit 5 on the classpath to compile/run (see "Running the tests" below) — don't include it in the compile line above unless `junit-jupiter` is on the classpath.
 
 ### Run directly (without a JAR)
 ```bash
 java -cp out minibank.MiniBank
+```
+
+### Running the tests
+JUnit 5 isn't bundled with the JDK, so add it to your IDE's project (IntelliJ/Eclipse/VS Code's Java extension can add the "JUnit 5" test library with a couple of clicks) or, if compiling by hand, download `junit-platform-console-standalone` and run:
+```bash
+javac -cp junit-platform-console-standalone.jar minibank/*.java minibank/exception/*.java minibank/model/*.java minibank/model/annotation/*.java minibank/util/*.java minibank/service/*.java -d out
+java -jar junit-platform-console-standalone.jar -cp out --select-class minibank.AccountTest
 ```
 
 ### Build a runnable JAR
@@ -167,7 +168,7 @@ cd out
 jar cfe minibank.jar minibank.MiniBank .
 cd ..
 ```
-`cfe` means: create (`c`), specify a jar file (`f`), and set the entry point / `Main-Class` (`e`) — this writes the manifest automatically so you don't need to hand-write `MANIFEST.MF`.
+`cfe` means: create (`c`), specify a jar file (`f`), and set the entry point / `Main-Class` (`e`) — this writes the manifest automatically so you don't need to hand-write `MANIFEST.MF`. Don't include `AccountTest.class` in the JAR — it needs JUnit on the classpath to run and isn't part of the application itself.
 
 ### Run the JAR
 ```bash
@@ -175,7 +176,7 @@ java -jar out/minibank.jar
 ```
 
 ## Roadmap
-Future work will run every menu action through the validation, command-parsing, and withdraw-rule layers, and wire up real account creation, deposits, withdrawals, and transfers using persistent storage.
+MiniBank is feature-complete for this course: a real BankService-driven menu, validation, custom exceptions, multithreading with synchronization and deadlock avoidance, persistence and reporting, Collections-based and generic storage, reflection-based validation and auditing, and a small JUnit test suite. Future extensions could add a proper CLI argument parser, richer reporting (per-account breakdowns), and a persistent audit log file alongside the console output.
 
 ## Author
 Ansh — Roll No: 25CS001
