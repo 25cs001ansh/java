@@ -1,10 +1,13 @@
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Model Layer: Represents an Item in the inventory system.
  * Enforces validation rules on item creation and mutation.
  */
-public class Item {
+public class Item implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String id;
     private String name;
     private double price;
